@@ -1,6 +1,6 @@
 # Open Claw AI Lab
 
-This repository runs an OpenClaw gateway in Docker with a lightweight Linux desktop, Brave browser, raw VNC access, and first-boot MiniMax seeding from `.env`.
+This repository runs an OpenClaw gateway in Docker with a lightweight Linux desktop, Chromium, raw VNC access, and first-boot MiniMax seeding from `.env`.
 
 ## Current Stack
 
@@ -8,7 +8,7 @@ This repository runs an OpenClaw gateway in Docker with a lightweight Linux desk
 - Custom image in [Dockerfile.openclaw](/Users/alan.man/Documents/personal-workbench/openclaw-lab/Dockerfile.openclaw)
 - Base image: `node:22-bookworm-slim`
 - OpenClaw install: `npm install -g openclaw@latest`
-- Desktop stack: `Xvfb + XFCE + x11vnc + Brave`
+- Desktop stack: `Xvfb + XFCE + x11vnc + Chromium`
 - Process supervisor: `supervisord`
 - OpenClaw command: `openclaw gateway --allow-unconfigured`
 - First-boot config seed: writes `/root/.openclaw/openclaw.json` from `.env` when no persisted OpenClaw config exists
@@ -87,7 +87,7 @@ If you do not set one, use the fallback password `change-me`.
 After connection, you should see:
 
 - an XFCE desktop session
-- Brave Browser available from the application menu
+- Chromium available from the application menu
 - the OpenClaw gateway continuing to run in the background
 
 If Docker is running on the same machine as your VNC client, `localhost:5901` is usually the correct host.
@@ -115,6 +115,10 @@ Then restart the service:
 ```bash
 docker compose restart openclaw
 ```
+
+OpenClaw now generates a gateway token during onboarding. After restart, open `http://127.0.0.1:18789/` and paste that token into the Control UI under `Settings -> token`.
+
+If you need to inspect the generated token inside the container, check `gateway.auth.token` in `/root/.openclaw/openclaw.json`.
 
 Because `/root/.openclaw` is stored in the `openclaw_data` volume, onboarding normally only needs to be done once.
 
@@ -172,9 +176,9 @@ You should see a single container named `openclaw-gateway` with port mappings fo
 
 ## Notes
 
-- This repo now includes a lightweight desktop, Brave, and raw VNC access for native VNC clients.
+- This repo now includes a lightweight desktop, Chromium, and raw VNC access for native VNC clients.
 - VNC is exposed directly on port `5901`; this repo does not currently include noVNC or a browser-based remote desktop.
-- Brave is launched with container-safe flags so it can run inside the root-owned desktop session.
+- Chromium is launched with container-safe flags so it can run inside the root-owned desktop session.
 - Fresh volumes are seeded to use MiniMax from `.env`; existing persisted OpenClaw state is preserved.
 - It still does not include noVNC, an Ollama sidecar, or a legacy Python bot runtime.
 - The OpenClaw version is not pinned in this repo; each build installs whatever `openclaw@latest` resolves to at build time.
