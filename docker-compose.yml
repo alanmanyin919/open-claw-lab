@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.openclaw
+      args:
+        OPENCLAW_BASE_IMAGE: ${OPENCLAW_BASE_IMAGE:-debian:bookworm-slim}
+        OPENCLAW_NODE_MAJOR: ${OPENCLAW_NODE_MAJOR:-22}
+        OPENCLAW_VERSION: ${OPENCLAW_VERSION:-latest}
     container_name: openclaw-gateway
     restart: unless-stopped
     env_file:

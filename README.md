@@ -1,15 +1,18 @@
 # Open Claw AI Lab
 
-This repository runs an OpenClaw gateway in Docker with a lightweight Linux desktop, Chromium, raw VNC access, and first-boot MiniMax seeding from `.env`.
+This repository runs an OpenClaw gateway in Docker with a lightweight Linux desktop, Google Chrome, raw VNC access, and first-boot MiniMax seeding from `.env`.
 
 ## Current Stack
 
 - Single `openclaw` service in [docker-compose.yml](/Users/alan.man/Documents/personal-workbench/openclaw-lab/docker-compose.yml)
 - Custom image in [Dockerfile.openclaw](/Users/alan.man/Documents/personal-workbench/openclaw-lab/Dockerfile.openclaw)
-- Base image: `node:22-bookworm-slim`
-- OpenClaw install: `npm install -g openclaw@latest`
-- Desktop stack: `Xvfb + XFCE + x11vnc + Chromium`
+- Base image: configurable Debian or Ubuntu image via `OPENCLAW_BASE_IMAGE` (default `debian:bookworm-slim`)
+- Node.js runtime: installed from NodeSource via `OPENCLAW_NODE_MAJOR` (default `22`)
+- OpenClaw install: `npm install -g openclaw@<OPENCLAW_VERSION>` (default `latest`)
+- Desktop stack: `Xvfb + XFCE + x11vnc + Google Chrome`
 - Process supervisor: `supervisord`
+- Utility packages: `jq`, `procps`, `psmisc`, `lsof`, `net-tools`, `dnsutils`, `iputils-ping`, `unzip`, `vim`, `nano`, `less`, `ffmpeg`, `fonts-noto`, `fonts-noto-cjk`
+- Container healthcheck: verifies the `openclaw gateway` process is running
 - OpenClaw command: `openclaw gateway --allow-unconfigured`
 - First-boot config seed: writes `/root/.openclaw/openclaw.json` from `.env` when no persisted OpenClaw config exists
 - Persistent config volume: `openclaw_data` mounted at `/root/.openclaw`
@@ -41,6 +44,9 @@ cp .env.example .env
 Set these values in `.env`:
 
 - `TELEGRAM_BOT_TOKEN`
+- Optional: `OPENCLAW_BASE_IMAGE` for the container OS base (default `debian:bookworm-slim`)
+- Optional: `OPENCLAW_NODE_MAJOR` for the Node.js major version (default `22`)
+- Optional: `OPENCLAW_VERSION` for the OpenClaw npm package version (default `latest`)
 - `MINIMAX_API_KEY`
 - Optional: `MINIMAX_BASE_URL` (default `https://api.minimax.io`)
 - Optional: `MINIMAX_MODEL` (default `MiniMax-M2.5`)
@@ -51,12 +57,23 @@ Set these values in `.env`:
 Example:
 
 ```dotenv
+OPENCLAW_BASE_IMAGE=debian:bookworm-slim
+OPENCLAW_NODE_MAJOR=22
+OPENCLAW_VERSION=latest
 TELEGRAM_BOT_TOKEN=...
 MINIMAX_API_KEY=...
 VNC_PASSWORD=replace-this
 VNC_PORT=5901
 SCREEN_GEOMETRY=1440x900x24
 ```
+
+You can switch the container OS by changing `OPENCLAW_BASE_IMAGE` to another Debian or Ubuntu image, for example:
+
+- `debian:bullseye-slim`
+- `debian:trixie-slim`
+- `ubuntu:24.04`
+
+This image still depends on `apt`, XFCE, and the Google Chrome Linux repository, so non-Debian/Ubuntu bases are not supported by the current Dockerfile.
 
 If `VNC_PASSWORD` is left empty, the container starts VNC with the fallback password `change-me` and logs a warning.
 
@@ -87,7 +104,7 @@ If you do not set one, use the fallback password `change-me`.
 After connection, you should see:
 
 - an XFCE desktop session
-- Chromium available from the application menu
+- Google Chrome available from the application menu
 - the OpenClaw gateway continuing to run in the background
 
 If Docker is running on the same machine as your VNC client, `localhost:5901` is usually the correct host.
@@ -176,12 +193,13 @@ You should see a single container named `openclaw-gateway` with port mappings fo
 
 ## Notes
 
-- This repo now includes a lightweight desktop, Chromium, and raw VNC access for native VNC clients.
+- This repo now includes a lightweight desktop, Google Chrome, and raw VNC access for native VNC clients.
 - VNC is exposed directly on port `5901`; this repo does not currently include noVNC or a browser-based remote desktop.
-- Chromium is launched with container-safe flags so it can run inside the root-owned desktop session.
+- Google Chrome is launched with container-safe flags so it can run inside the root-owned desktop session.
 - Fresh volumes are seeded to use MiniMax from `.env`; existing persisted OpenClaw state is preserved.
 - It still does not include noVNC, an Ollama sidecar, or a legacy Python bot runtime.
-- The OpenClaw version is not pinned in this repo; each build installs whatever `openclaw@latest` resolves to at build time.
+- The OpenClaw npm package is configurable via `OPENCLAW_VERSION`; leaving it as `latest` preserves the old behavior.
+- The container base image is configurable, but it must be a Debian or Ubuntu image because the build installs packages with `apt`.
 
 ## Troubleshooting
 

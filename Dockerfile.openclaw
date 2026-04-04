@@ -1,4 +1,10 @@
-FROM node:22-bookworm-slim
+ARG OPENCLAW_BASE_IMAGE=debian:bookworm-slim
+FROM ${OPENCLAW_BASE_IMAGE}
+
+ARG OPENCLAW_NODE_MAJOR=22
+ARG OPENCLAW_VERSION=latest
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ENV NODE_ENV=production
 ENV DISPLAY=:1
@@ -7,16 +13,36 @@ ENV SCREEN_GEOMETRY=1440x900x24
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN . /etc/os-release \
+    && case "${ID}" in \
+        debian|ubuntu) ;; \
+        *) echo "Unsupported base image '${OPENCLAW_BASE_IMAGE:-unknown}'. Use a Debian or Ubuntu image."; exit 1 ;; \
+    esac \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
     ca-certificates \
     chromium \
     curl \
     dbus \
     dbus-x11 \
+    dnsutils \
+    ffmpeg \
+    fonts-noto \
+    fonts-noto-cjk \
     git \
     gnupg \
+    iputils-ping \
+    jq \
+    less \
     libnotify-bin \
+    lsof \
+    nano \
+    net-tools \
+    procps \
+    psmisc \
     supervisor \
+    unzip \
+    vim \
     xfce4 \
     xfce4-notifyd \
     xfce4-power-manager \
@@ -25,10 +51,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     x11vnc \
     xvfb \
     xauth \
+    && mkdir -p /usr/share/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+      | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${OPENCLAW_NODE_MAJOR}.x nodistro main" \
+      > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+RUN curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
+      | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
+      > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
 # Install OpenClaw CLI in the container image.
-RUN npm install -g openclaw@latest --verbose
+RUN npm install -g openclaw@${OPENCLAW_VERSION} --verbose
 
 RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d /opt/openclaw/bin
 
@@ -38,7 +78,7 @@ COPY docker/start-xfce.sh /opt/openclaw/bin/start-xfce.sh
 COPY docker/init-openclaw-config.sh /opt/openclaw/bin/init-openclaw-config.sh
 COPY docker/start-vnc.sh /opt/openclaw/bin/start-vnc.sh
 COPY docker/start-openclaw.sh /opt/openclaw/bin/start-openclaw.sh
-COPY docker/chromium /usr/local/bin/chromium
+COPY docker/google-chrome-stable /usr/local/bin/google-chrome-stable
 COPY docker/pm-is-supported /usr/local/bin/pm-is-supported
 
 RUN chmod +x \
@@ -47,10 +87,13 @@ RUN chmod +x \
     /opt/openclaw/bin/init-openclaw-config.sh \
     /opt/openclaw/bin/start-vnc.sh \
     /opt/openclaw/bin/start-openclaw.sh \
-    /usr/local/bin/chromium \
+    /usr/local/bin/google-chrome-stable \
     /usr/local/bin/pm-is-supported
 
 # OpenClaw gateway default port and VNC desktop port.
 EXPOSE 18789 5901
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+  CMD pgrep -f "openclaw gateway" >/dev/null || exit 1
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/openclaw.conf"]
