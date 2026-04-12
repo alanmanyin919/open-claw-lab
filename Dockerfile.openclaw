@@ -3,6 +3,7 @@ FROM ${OPENCLAW_BASE_IMAGE}
 
 ARG OPENCLAW_NODE_MAJOR=22
 ARG OPENCLAW_VERSION=latest
+ARG TARGETARCH
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -60,13 +61,17 @@ RUN . /etc/os-release \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
-      | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
-      > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+RUN if [ "${TARGETARCH:-}" = "amd64" ]; then \
+      curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
+        | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
+      && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
+        > /etc/apt/sources.list.d/google-chrome.list \
+      && apt-get update \
+      && apt-get install -y --no-install-recommends google-chrome-stable \
+      && rm -rf /var/lib/apt/lists/*; \
+    else \
+      echo "Skipping Google Chrome install on ${TARGETARCH:-unknown}; using Chromium fallback."; \
+    fi
 # Install OpenClaw CLI in the container image.
 RUN npm install -g openclaw@${OPENCLAW_VERSION} --verbose
 

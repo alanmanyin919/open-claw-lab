@@ -1,6 +1,6 @@
 # Open Claw AI Lab
 
-This repository runs an OpenClaw gateway in Docker with a lightweight Linux desktop, Google Chrome, raw VNC access, and first-boot MiniMax seeding from `.env`.
+This repository runs an OpenClaw gateway in Docker with a lightweight Linux desktop, a Chromium-based browser, raw VNC access, and first-boot MiniMax seeding from `.env`.
 
 ## Current Stack
 
@@ -9,7 +9,7 @@ This repository runs an OpenClaw gateway in Docker with a lightweight Linux desk
 - Base image: configurable Debian or Ubuntu image via `OPENCLAW_BASE_IMAGE` (default `debian:bookworm-slim`)
 - Node.js runtime: installed from NodeSource via `OPENCLAW_NODE_MAJOR` (default `22`)
 - OpenClaw install: `npm install -g openclaw@<OPENCLAW_VERSION>` (default `latest`)
-- Desktop stack: `Xvfb + XFCE + x11vnc + Google Chrome`
+- Desktop stack: `Xvfb + XFCE + x11vnc + Chrome/Chromium`
 - Process supervisor: `supervisord`
 - Utility packages: `jq`, `procps`, `psmisc`, `lsof`, `net-tools`, `dnsutils`, `iputils-ping`, `unzip`, `vim`, `nano`, `less`, `ffmpeg`, `fonts-noto`, `fonts-noto-cjk`
 - Container healthcheck: verifies the `openclaw gateway` process is running
@@ -73,7 +73,7 @@ You can switch the container OS by changing `OPENCLAW_BASE_IMAGE` to another Deb
 - `debian:trixie-slim`
 - `ubuntu:24.04`
 
-This image still depends on `apt`, XFCE, and the Google Chrome Linux repository, so non-Debian/Ubuntu bases are not supported by the current Dockerfile.
+This image still depends on `apt` and XFCE, so non-Debian/Ubuntu bases are not supported by the current Dockerfile. On `amd64` it installs Google Chrome; on `arm64` it uses Debian Chromium.
 
 If `VNC_PASSWORD` is left empty, the container starts VNC with the fallback password `change-me` and logs a warning.
 
@@ -104,7 +104,7 @@ If you do not set one, use the fallback password `change-me`.
 After connection, you should see:
 
 - an XFCE desktop session
-- Google Chrome available from the application menu
+- Chrome or Chromium available from the application menu
 - the OpenClaw gateway continuing to run in the background
 
 If Docker is running on the same machine as your VNC client, `localhost:5901` is usually the correct host.
@@ -193,9 +193,9 @@ You should see a single container named `openclaw-gateway` with port mappings fo
 
 ## Notes
 
-- This repo now includes a lightweight desktop, Google Chrome, and raw VNC access for native VNC clients.
+- This repo now includes a lightweight desktop, a Chromium-based browser, and raw VNC access for native VNC clients.
 - VNC is exposed directly on port `5901`; this repo does not currently include noVNC or a browser-based remote desktop.
-- Google Chrome is launched with container-safe flags so it can run inside the root-owned desktop session.
+- The bundled browser launcher uses Google Chrome on `amd64` and Chromium on `arm64`, with container-safe flags for the root-owned desktop session.
 - Fresh volumes are seeded to use MiniMax from `.env`; existing persisted OpenClaw state is preserved.
 - It still does not include noVNC, an Ollama sidecar, or a legacy Python bot runtime.
 - The OpenClaw npm package is configurable via `OPENCLAW_VERSION`; leaving it as `latest` preserves the old behavior.
